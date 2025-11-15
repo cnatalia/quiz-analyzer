@@ -1,6 +1,5 @@
-import { STOP_WORDS } from "../const/main.constant";
+import { STOP_WORDS, type AnalysisSummary, type FrequencyMap, type QuizQuestion } from "../const/main.constant";
 
-export type FrequencyMap = Record<string, number>;
 
 // Minimum word length filter: Excludes single characters and ensures we're analyzing actual words.
 const MIN_WORD_LENGTH = 2;
@@ -45,4 +44,26 @@ export const getTopWords = (
     .filter(([, count]) => count >= minFrequency)
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit);
+};
+
+
+export const calculateSummary = (
+  allQuestions: QuizQuestion[],
+  wellQuestions: QuizQuestion[],
+  wrongQuestions: QuizQuestion[],
+  allWords: string[]
+): AnalysisSummary => {
+  const totalQuestions = allQuestions.length;
+  const wellAnsweredCount = wellQuestions.length;
+  const wrongAnsweredCount = wrongQuestions.length;
+  const totalWords = allWords.length;
+  const averageWordsPerQuestion = totalQuestions > 0 ? totalWords / totalQuestions : 0;
+
+  return {
+    totalQuestions,
+    wellAnsweredCount,
+    wrongAnsweredCount,
+    averageWordsPerQuestion: Math.round(averageWordsPerQuestion * 100) / 100,
+    wordsAnalyzed: totalWords,
+  };
 };
