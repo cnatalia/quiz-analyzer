@@ -1,18 +1,48 @@
 import { STOP_WORDS } from "../const/main.constant";
 
-export const removeStopWordsAndSpecialCharacters = (text: string) => {
-  const words = text.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, "").split(/\s+/);
-  return words.filter((word) => !STOP_WORDS.includes(word));
+export type FrequencyMap = Record<string, number>;
+
+// Minimum word length filter: Excludes single characters and ensures we're analyzing actual words.
+const MIN_WORD_LENGTH = 2;
+
+export const removeStopWordsAndSpecialCharacters = (text: string): string[] => {
+  if (!text || typeof text !== "string") {
+    return [];
+  }
+
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .split(/\s+/)
+    .filter((word) => word.length >= MIN_WORD_LENGTH && !STOP_WORDS.includes(word));
+
+  return words;
 };
 
-export const getFrequency = (words: string[]) => {
-  return words.reduce((acc: any, current) => {
-    if (!acc[current]) acc[current] = 0;
-    acc[current] += 1;
+export const getFrequency = (words: string[]): FrequencyMap => {
+  if (!words || words.length === 0) {
+    return {};
+  }
+
+  return words.reduce((acc: FrequencyMap, current) => {
+    if (current && current.trim().length > 0) {
+      acc[current] = (acc[current] || 0) + 1;
+    }
     return acc;
   }, {});
 };
 
-export const getTop3Words = (frequency: any) => {
-  return Object.entries(frequency).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3);
+export const getTopWords = (
+  frequency: FrequencyMap,
+  minFrequency: number = 1,
+  limit: number = 3
+): [string, number][] => {
+  if (!frequency || Object.keys(frequency).length === 0) {
+    return [];
+  }
+
+  return Object.entries(frequency)
+    .filter(([, count]) => count >= minFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
 };

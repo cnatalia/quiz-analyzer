@@ -3,7 +3,7 @@ import "./App.css";
 import useGetQuizesQuestion from "./hook/use-get-quiz-questions";
 import {
   getFrequency,
-  getTop3Words,
+  getTopWords,
   removeStopWordsAndSpecialCharacters,
 } from "./utils/main";
 
@@ -18,27 +18,46 @@ type QuizQuestion = {
 };
 
 const WELL_ANSWER_THRESHOLD = 0.5;
+const MIN_FREQUENCY = 3;
+const TOP_WORDS_LIMIT = 3; 
 
-const getTop3WordsFromQuestions = (questions: QuizQuestion[]): WordCount[] => {
+const getTopWordsFromQuestions = (questions: QuizQuestion[]): WordCount[] => {
   if (!questions || questions.length === 0) {
     return [];
   }
 
-  const texts = questions.map((question) => question.text).join(" ");
-  const words = removeStopWordsAndSpecialCharacters(texts);
-  const frequency = getFrequency(words);
-  const frequencySorted = getTop3Words(frequency);
+  try {
+    const texts = questions
+      .map((question) => question.text || "")
+      .filter((text) => text.trim().length > 0)
+      .join(" ");
 
-  return frequencySorted.map(([word, count]) => ({
-    word,
-    count: Number(count),
-  }));
+    if (!texts || texts.trim().length === 0) {
+      return [];
+    }
+
+    const words = removeStopWordsAndSpecialCharacters(texts);
+    if (words.length === 0) {
+      return [];
+    }
+
+    const frequency = getFrequency(words);
+    const frequencySorted = getTopWords(frequency, MIN_FREQUENCY, TOP_WORDS_LIMIT);
+
+    return frequencySorted.map(([word, count]) => ({
+      word,
+      count: Number(count),
+    }));
+  } catch (error) {
+    console.error("Error processing questions:", error);
+    return [];
+  }
 };
 
 function App() {
   const { data: quizQuestions, isLoading, error } = useGetQuizesQuestion();
-  const [top3WellWord, setTop3WellWords] = useState<WordCount[]>([]);
-  const [top3WrongWord, setTop3WrongWords] = useState<WordCount[]>([]);
+  const [top3WellWords, setTop3WellWords] = useState<WordCount[]>([]);
+  const [top3WrongWords, setTop3WrongWords] = useState<WordCount[]>([]);
 
   const showTop3Words = () => {
     if (!quizQuestions || quizQuestions.length === 0) {
@@ -53,8 +72,8 @@ function App() {
       (question) => question.percent_correct >= WELL_ANSWER_THRESHOLD
     );
 
-    setTop3WrongWords(getTop3WordsFromQuestions(wrongAnswerQuestions));
-    setTop3WellWords(getTop3WordsFromQuestions(wellAnswerQuestions));
+    setTop3WrongWords(getTopWordsFromQuestions(wrongAnswerQuestions));
+    setTop3WellWords(getTopWordsFromQuestions(wellAnswerQuestions));
   };
 
   if (isLoading) {
@@ -75,11 +94,11 @@ function App() {
       </button>
       <div className="flex flex-row gap-x-8 ">
         <div className="flex flex-col ">
-          {top3WellWord.length > 0 && (
+          {top3WellWords.length > 0 && (
             <>
               <h3 className="text-xl font-semibold"> Well Answered</h3>
               <ul className="pl-4 list-decimal">
-                {top3WellWord.map((item) => (
+                {top3WellWords.map((item) => (
                   <li key={item.word}>
                     {item.word} : {item.count}
                   </li>
@@ -89,11 +108,11 @@ function App() {
           )}
         </div>
         <div className="flex flex-col">
-          {top3WrongWord.length > 0 && (
+          {top3WrongWords.length > 0 && (
             <>
               <h3 className="text-xl font-semibold">Wrong Answered</h3>
               <ul className="pl-4 list-decimal">
-                {top3WrongWord.map((item) => (
+                {top3WrongWords.map((item) => (
                   <li key={item.word}>
                     {item.word} : {item.count}
                   </li>
